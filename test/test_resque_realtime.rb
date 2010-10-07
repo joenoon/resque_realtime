@@ -6,6 +6,8 @@ class TestResqueRealtime < Test::Unit::TestCase
 
     setup do
       redis.flushdb
+      Resque::Realtime.clear_callbacks(:resource_connected)
+      Resque::Realtime.clear_callbacks(:resource_disconnected)
     end
 
     should "should maintain correct users" do
@@ -158,6 +160,40 @@ class TestResqueRealtime < Test::Unit::TestCase
         assert_equal 0, server_connected_resources_count(server_env)
       end
 
+    end
+    
+    context "callbacks" do
+      
+      setup do
+        $tracker = 0
+      end
+      
+      should "track index of added callbacks" do
+        
+        5.times do |i|
+          cb = Resque::Realtime.add_callback(:resource_connected) { |n| $tracker+=n }
+          assert_equal i, cb
+        end
+        
+        assert_equal 5, Resque::Realtime.callbacks[:resource_connected].size
+        Resque::Realtime.clear_callback(:resource_connected, 1)
+        assert_equal 5, Resque::Realtime.callbacks[:resource_connected].size
+        
+        assert_equal 0, $tracker
+        
+        Resque::Realtime.run_callbacks(:resource_connected, 1)
+        assert_equal 4, $tracker
+        
+        $tracker = 0
+        
+        Resque::Realtime.clear_callbacks(:resource_connected)
+        assert_equal 0, Resque::Realtime.callbacks[:resource_connected].size
+        
+        Resque::Realtime.run_callbacks(:resource_connected, 1)
+        assert_equal 0, $tracker
+        
+      end
+      
     end
 
   end

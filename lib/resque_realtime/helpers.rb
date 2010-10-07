@@ -51,7 +51,9 @@ module Resque::RealtimeHelpers
     server_online!(server_env)
     user_id = extract_user_id(resource)
     redis.sadd(user_resources_key(user_id), resource)
-    redis.sadd(server_connected_resources_key(server_env), resource)
+    if redis.sadd(server_connected_resources_key(server_env), resource)
+      run_callbacks(:resource_connected, server_env, resource)
+    end
     redis.sadd(server_connected_users_key(server_env), user_id)
     sync_globals!
   end
@@ -59,7 +61,9 @@ module Resque::RealtimeHelpers
   def disconnect!(server_env, resource)
     user_id = extract_user_id(resource)
     redis.srem(user_resources_key(user_id), resource)
-    redis.srem(server_connected_resources_key(server_env), resource)
+    if redis.srem(server_connected_resources_key(server_env), resource)
+      run_callbacks(:resource_disconnected, server_env, resource)
+    end
     if redis.sinter(user_resources_key(user_id), server_connected_resources_key(server_env)).size.zero?
       redis.srem(server_connected_users_key(server_env), user_id)
     end
