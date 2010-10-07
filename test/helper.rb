@@ -76,4 +76,21 @@ class Test::Unit::TestCase
     Resque::Realtime.redis.scard Resque::Realtime.servers_key
   end
   
+  # internal
+  
+  def resource_map_set_of_connection_hashes(arr)
+    arr.map { |x| "#{x[:user_id]}:#{x[:session_id]}" }
+  end
+  
+  def any_of_these_server_envs_match?(server_envs, server_env)
+    server_env = server_env.symbolize_keys
+    server_envs.each do |env|
+      possible_env = env.symbolize_keys
+      if possible_env[:public_addr] && possible_env[:port] && possible_env[:public_addr] == server_env[:public_addr] && possible_env[:port].to_i == server_env[:port].to_i
+        return true
+      end
+    end
+    false
+  end
+  
 end

@@ -1,8 +1,15 @@
+require 'digest/sha1'
 module Resque::RealtimeHelpers
   extend self
   
   def dummy_keys
     [ "rt:dummy:key" ]
+  end
+
+  def random_safe_key
+    str = "#{[Array.new(40){rand(256).chr}.join].pack("m")[0...40]}-#{Time.now.to_f}"
+    sha = Digest::SHA1.hexdigest(str)
+    "rt:rand:#{Process.pid}:#{sha}"
   end
 
   def user_resources_key(user_id)
@@ -89,6 +96,23 @@ module Resque::RealtimeHelpers
     redis.smembers(server_connected_resources_key(server_env)).each do |resource|
       disconnect!(server_env, resource)
     end
+  end
+  
+  def dispatch_to_resources(resources, payload)
+    temp_key = random_safe_key
+    redis.del temp_key
+    resources.each do |resource|
+      redis.sadd temp_key, resource
+    end
+    redis.smembers(servers_key).each do |server_id|
+      server_env = server_id_to_server_env(server_id)
+      server_resources_key = server_connected_resources_key(server_env)
+      matching_resources = redis.sinter(temp_key, server_resources_key)
+      if matching_resources.any?
+        run_callbacks(:dispatch_to_resources, server_env, matching_resources, payload)
+      end
+    end
+    redis.del temp_key
   end
 
 end

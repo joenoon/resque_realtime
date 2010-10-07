@@ -194,6 +194,84 @@ class TestResqueRealtime < Test::Unit::TestCase
         
       end
       
+      context "for dispatching to resources" do
+        
+        setup do
+          $tracker = []
+          Resque::Realtime.clear_callbacks(:dispatch_to_resources)
+          Resque::Realtime.add_callback :dispatch_to_resources do |server_env, resources, payload|
+            $tracker.push({ :server_env => server_env.symbolize_keys, :resources => resources, :payload => payload })
+          end
+
+          @server1 = { :public_addr => "127.0.0.1", :port => 1000 }
+          @server2 = { :public_addr => "127.0.0.1", :port => 2000 }
+          @server3 = { :public_addr => "127.0.0.1", :port => 3000 }
+
+          @jim1 = connect_new(@server1)
+          @jim2 = add_resource_for_user(@server2, @jim1[:user_id])
+          @jim3 = add_resource_for_user(@server3, @jim1[:user_id])
+          @jim4 = add_resource_for_user(@server3, @jim1[:user_id])
+          
+          # jim has 1 connection to servers 1+2, and 2 connections to server 3
+          @jims = [ @jim1, @jim2, @jim3, @jim4 ]
+
+          @bob1 = connect_new(@server2)
+          
+          # bob has 1 connection to server 2
+          @bobs = [ @bob1 ]
+          
+          @joe1 = connect_new(@server1)
+          @joe2 = add_resource_for_user(@server1, @joe1[:user_id])
+          @joe3 = add_resource_for_user(@server1, @joe1[:user_id])
+          @joe4 = add_resource_for_user(@server2, @joe1[:user_id])
+          @joe5 = add_resource_for_user(@server2, @joe1[:user_id])
+          @joe6 = add_resource_for_user(@server2, @joe1[:user_id])
+          
+          # joe has 3 connections to server 1 and 3 connections to server 2
+          @joes = [ @joe1, @joe2, @joe3, @joe4, @joe5, @joe6 ]
+          
+          @payload = [ 'test', { :success => true } ]
+
+        end
+        
+        should "dispatch twice to send to joe" do
+          joes = resource_map_set_of_connection_hashes(@joes)
+          Resque::Realtime.dispatch_to_resources(joes, @payload)
+          assert_equal 2, $tracker.size
+          $tracker.each do |t|
+            assert any_of_these_server_envs_match?([ @server1, @server2 ], t[:server_env])
+          end
+        end
+
+        should "dispatch three times to send to jim" do
+          jims = resource_map_set_of_connection_hashes(@jims)
+          Resque::Realtime.dispatch_to_resources(jims, @payload)
+          assert_equal 3, $tracker.size
+          $tracker.each do |t|
+            assert any_of_these_server_envs_match?([ @server1, @server2, @server3 ], t[:server_env])
+          end
+        end
+
+        should "dispatch one time to send to bob" do
+          bobs = resource_map_set_of_connection_hashes(@bobs)
+          Resque::Realtime.dispatch_to_resources(bobs, @payload)
+          assert_equal 1, $tracker.size
+          $tracker.each do |t|
+            assert any_of_these_server_envs_match?([ @server2 ], t[:server_env])
+          end
+        end
+        
+        should "send all" do
+          resources = [ @joes, @jims, @bobs ].map {|x| resource_map_set_of_connection_hashes(x) }.flatten
+          Resque::Realtime.dispatch_to_resources(resources, @payload)
+          assert_equal 3, $tracker.size
+          $tracker.each do |t|
+            assert any_of_these_server_envs_match?([ @server1, @server2, @server3 ], t[:server_env])
+          end
+        end
+        
+      end
+      
     end
 
   end
