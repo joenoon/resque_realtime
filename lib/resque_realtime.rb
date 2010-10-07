@@ -1,0 +1,8 @@
+require 'active_support'
+require 'resque'
+require 'resque_realtime/helpers'
+require 'resque_realtime/base'
+require 'resque_realtime/connected'
+require 'resque_realtime/disconnected'
+require 'resque_realtime/server_offline'
+require 'resque_realtime/server_online'

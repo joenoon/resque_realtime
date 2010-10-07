@@ -1,4 +1,4 @@
-= resque-realtime
+= resque_realtime
 
 Description goes here.
 

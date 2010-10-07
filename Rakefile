@@ -4,13 +4,15 @@ require 'rake'
 begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
-    gem.name = "resque-realtime"
-    gem.summary = %Q{TODO: one-line summary of your gem}
-    gem.description = %Q{TODO: longer description of your gem}
+    gem.name = "resque_realtime"
+    gem.summary = %Q{Resque jobs that work together with the resque_realtime node.js socket.io server}
+    gem.description = %Q{Resque jobs that work together with the resque_realtime node.js socket.io server.}
     gem.email = "joenoon@gmail.com"
-    gem.homepage = "http://github.com/joenoon/resque-realtime"
+    gem.homepage = "http://github.com/joenoon/resque_realtime"
     gem.authors = ["Joe Noon"]
-    gem.add_development_dependency "thoughtbot-shoulda", ">= 0"
+    gem.add_dependency "activesupport", ">= 2.3.8"
+    gem.add_dependency "resque", ">= 1.9.10"
+    gem.add_development_dependency "shoulda"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
   Jeweler::GemcutterTasks.new
@@ -47,7 +49,7 @@ Rake::RDocTask.new do |rdoc|
   version = File.exist?('VERSION') ? File.read('VERSION') : ""
 
   rdoc.rdoc_dir = 'rdoc'
-  rdoc.title = "resque-realtime #{version}"
+  rdoc.title = "resque_realtime #{version}"
   rdoc.rdoc_files.include('README*')
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
