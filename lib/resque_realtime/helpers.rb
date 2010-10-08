@@ -55,7 +55,7 @@ module Resque::RealtimeHelpers
   end
 
   def connect!(server_env, resource)
-    server_online!(server_env)
+    ensure_server_in_servers_key!(server_env)
     user_id = extract_user_id(resource)
     redis.sadd(user_resources_key(user_id), resource)
     if redis.sadd(server_connected_resources_key(server_env), resource)
@@ -86,16 +86,25 @@ module Resque::RealtimeHelpers
     server_user_keys = server_envs.map { |server_env| server_connected_users_key(server_env) } + dummy_keys
     redis.sunionstore(connected_users_key, *server_user_keys)
   end
-
-  def server_online!(server_env)
-    redis.sadd(servers_key, server_id(server_env))
-  end
-
-  def server_offline!(server_env)
-    redis.srem(servers_key, server_id(server_env))
+  
+  def disconnect_all!(server_env)
     redis.smembers(server_connected_resources_key(server_env)).each do |resource|
       disconnect!(server_env, resource)
     end
+  end
+  
+  def ensure_server_in_servers_key!(server_env)
+    redis.sadd(servers_key, server_id(server_env))
+  end
+
+  def server_online!(server_env)
+    disconnect_all!(server_env)
+    ensure_server_in_servers_key!(server_env)
+  end
+
+  def server_offline!(server_env)
+    disconnect_all!(server_env)
+    redis.srem(servers_key, server_id(server_env))
   end
   
   def dispatch_to_resources(resources, payload)
